@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Saber Fruits Controller</title>
+    <link rel="stylesheet" href="/styles.css">
+    <script src="https://code.iconify.design/iconify-icon/2.3.0/iconify-icon.min.js"></script>
+  </head>
+  <body class="controller-page">
+    <main class="controller-shell">
+      <div class="controller-topline">
+        <iconify-icon icon="mdi:controller" class="brand-icon"></iconify-icon>
+        <strong>Saber Fruits</strong>
+      </div>
+
+      <section class="controller-panel">
+        <span class="hud-label">Room</span>
+        <h1 id="controller-room">------</h1>
+        <p id="controller-status">Connecting...</p>
+
+        <button id="enable-motion" type="button">
+          <iconify-icon icon="mdi:motion-sensor"></iconify-icon>
+          <span>Enable motion</span>
+        </button>
+        <button id="calibrate-motion" type="button" disabled>
+          <iconify-icon icon="mdi:crosshairs-gps"></iconify-icon>
+          <span>Calibrate</span>
+        </button>
+
+        <div class="tilt-pad" aria-hidden="true">
+          <div id="tilt-dot"></div>
+        </div>
+
+        <dl class="motion-readout">
+          <div>
+            <dt>Alpha</dt>
+            <dd id="alpha-value">0.0</dd>
+          </div>
+          <div>
+            <dt>Beta</dt>
+            <dd id="beta-value">0.0</dd>
+          </div>
+          <div>
+            <dt>Gamma</dt>
+            <dd id="gamma-value">0.0</dd>
+          </div>
+        </dl>
+      </section>
+    </main>
+
+    <script type="module" src="/controller.js"></script>
+  </body>
+</html>

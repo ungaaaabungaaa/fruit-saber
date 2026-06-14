@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Saber Fruits</title>
+    <link rel="stylesheet" href="/styles.css">
+    <script src="https://code.iconify.design/iconify-icon/2.3.0/iconify-icon.min.js"></script>
+  </head>
+  <body class="game-page">
+    <canvas id="game-canvas" aria-label="Saber Fruits game display"></canvas>
+
+    <header class="game-hud" aria-live="polite">
+      <div class="hud-item">
+        <iconify-icon icon="mdi:star-four-points"></iconify-icon>
+        <span class="hud-label">Score</span>
+        <strong id="score">0</strong>
+      </div>
+      <div class="hud-item">
+        <iconify-icon icon="mdi:heart"></iconify-icon>
+        <span class="hud-label">Lives</span>
+        <strong id="lives">5</strong>
+      </div>
+      <div class="hud-item">
+        <iconify-icon icon="mdi:pound-box-outline"></iconify-icon>
+        <span class="hud-label">Room</span>
+        <strong id="hud-room">------</strong>
+      </div>
+      <div class="connection-pill" id="connection-pill">Waiting</div>
+    </header>
+
+    <section class="waiting-panel" id="waiting-panel">
+      <div class="brand-lockup">
+        <iconify-icon icon="mdi:sword" class="brand-icon"></iconify-icon>
+        <h1>Saber Fruits</h1>
+      </div>
+
+      <div class="qr-wrap">
+        <canvas id="qr-canvas" width="220" height="220"></canvas>
+      </div>
+
+      <div class="room-code" id="room-code">------</div>
+      <p class="status-copy" id="status-copy">Pairing room...</p>
+      <a class="manual-link" id="controller-link" href="#">Open controller</a>
+
+      <button class="mode-toggle" id="infinite-button" type="button" aria-pressed="false">
+        <iconify-icon icon="mdi:infinity"></iconify-icon>
+        <span>Infinite lives off</span>
+      </button>
+
+      <div class="waiting-actions">
+        <button id="practice-button" type="button">
+          <iconify-icon icon="mdi:cursor-default-click"></iconify-icon>
+          <span>Practice</span>
+        </button>
+        <button id="reset-button" type="button">
+          <iconify-icon icon="mdi:refresh"></iconify-icon>
+          <span>Reset</span>
+        </button>
+      </div>
+    </section>
+
+    <script type="module" src="/game.js"></script>
+  </body>
+</html>
