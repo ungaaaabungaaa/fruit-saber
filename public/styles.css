@@ -93,6 +93,13 @@ button:disabled {
   border-radius: 8px;
   background: rgba(8, 10, 15, 0.64);
   backdrop-filter: blur(18px);
+  transition: opacity 150ms ease, transform 150ms ease;
+}
+
+.game-hud.is-hidden {
+  pointer-events: none;
+  opacity: 0;
+  transform: translate(-50%, -14px);
 }
 
 .game-hud > div {

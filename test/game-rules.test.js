@@ -4,6 +4,7 @@ import { test } from "node:test";
 import {
   applyBombHit,
   applyFruitMiss,
+  createFruitHalves,
   formatLives,
   shouldEndRound
 } from "../public/game-rules.js";
@@ -35,4 +36,30 @@ test("only normal mode at zero lives ends the round", () => {
 test("infinite lives displays as an infinity symbol", () => {
   assert.equal(formatLives({ lives: 3, infiniteLives: true }), "∞");
   assert.equal(formatLives({ lives: 3, infiniteLives: false }), "3");
+});
+
+test("fruit slice creates two halves that move apart", () => {
+  const halves = createFruitHalves(
+    {
+      x: 100,
+      y: 120,
+      vx: 10,
+      vy: 20,
+      radius: 30,
+      color: "#ffbd4a",
+      angle: 0.4
+    },
+    { x: 50, y: 120 },
+    { x: 150, y: 120 }
+  );
+
+  assert.equal(halves.length, 2);
+  assert.equal(halves[0].side, -1);
+  assert.equal(halves[1].side, 1);
+  assert.equal(halves[0].color, "#ffbd4a");
+  assert.equal(halves[1].color, "#ffbd4a");
+  assert.equal(halves[0].vx, 10);
+  assert.equal(halves[1].vx, 10);
+  assert.ok(halves[0].vy < 20);
+  assert.ok(halves[1].vy > 20);
 });

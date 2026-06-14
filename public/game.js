@@ -1,6 +1,7 @@
 import {
   applyBombHit,
   applyFruitMiss,
+  createFruitHalves,
   formatLives,
   shouldEndRound
 } from "./game-rules.js";
@@ -8,6 +9,7 @@ import {
 const canvas = document.querySelector("#game-canvas");
 const ctx = canvas.getContext("2d");
 const qrCanvas = document.querySelector("#qr-canvas");
+const gameHud = document.querySelector("#game-hud");
 const waitingPanel = document.querySelector("#waiting-panel");
 const roomCodeEl = document.querySelector("#room-code");
 const hudRoomEl = document.querySelector("#hud-room");
@@ -39,6 +41,7 @@ let infiniteLives = false;
 let audioContext;
 
 const fruits = [];
+const fruitHalves = [];
 const particles = [];
 const blade = {
   x: 0,
@@ -131,6 +134,10 @@ function setStatus(copy, pill = copy) {
   connectionPill.textContent = pill;
 }
 
+function syncHudVisibility() {
+  gameHud.classList.toggle("is-hidden", running);
+}
+
 function currentLifeState() {
   return { lives, infiniteLives };
 }
@@ -175,6 +182,7 @@ function connectWebSocket() {
       running = false;
       roundState = "waiting";
       waitingPanel.classList.remove("is-hidden");
+      syncHudVisibility();
       setStatus("Controller disconnected.", "Waiting");
     }
 
@@ -188,6 +196,7 @@ function connectWebSocket() {
     running = false;
     roundState = "waiting";
     waitingPanel.classList.remove("is-hidden");
+    syncHudVisibility();
     setStatus("Reconnecting...", "Offline");
     window.setTimeout(connectWebSocket, 900);
   });
@@ -223,10 +232,12 @@ function startGame() {
   running = true;
   roundState = "playing";
   waitingPanel.classList.add("is-hidden");
+  syncHudVisibility();
 }
 
 function resetRound() {
   fruits.length = 0;
+  fruitHalves.length = 0;
   particles.length = 0;
   blade.trail.length = 0;
   running = false;
@@ -235,6 +246,7 @@ function resetRound() {
   spawnTimer = 0;
   scoreEl.textContent = score;
   livesEl.textContent = formatLives(currentLifeState());
+  syncHudVisibility();
 }
 
 function spawnItem() {
@@ -273,6 +285,11 @@ function sliceFruit(fruit) {
   score += 10;
   scoreEl.textContent = score;
   playSliceSound();
+  fruitHalves.push(...createFruitHalves(
+    fruit,
+    { x: blade.px, y: blade.py },
+    { x: blade.x, y: blade.y }
+  ));
 
   for (let i = 0; i < 24; i += 1) {
     const angle = Math.random() * Math.PI * 2;
@@ -314,6 +331,7 @@ function hitBomb(bomb) {
     running = false;
     roundState = "gameover";
     waitingPanel.classList.remove("is-hidden");
+    syncHudVisibility();
     setStatus("Bomb got you. Reset or try infinite lives.", controllerConnected ? "Phone linked" : "Waiting");
   }
 }
@@ -370,6 +388,19 @@ function update(dt) {
       if (running && fruit.kind !== "bomb") {
         setLifeState(applyFruitMiss(currentLifeState()));
       }
+    }
+  }
+
+  for (let i = fruitHalves.length - 1; i >= 0; i -= 1) {
+    const half = fruitHalves[i];
+    half.life -= dt * 1000;
+    half.x += half.vx * dt;
+    half.y += half.vy * dt;
+    half.vy += 520 * dt;
+    half.angle += half.spin * dt;
+
+    if (half.life <= 0 || half.y - half.radius > height + 80) {
+      fruitHalves.splice(i, 1);
     }
   }
 
@@ -473,6 +504,49 @@ function drawBomb(bomb) {
   ctx.restore();
 }
 
+function drawFruitHalves() {
+  for (const half of fruitHalves) {
+    const fade = Math.max(0, Math.min(1, half.life / half.maxLife));
+    ctx.save();
+    ctx.globalAlpha = fade;
+    ctx.translate(half.x, half.y);
+    ctx.rotate(half.angle);
+
+    ctx.fillStyle = half.color;
+    ctx.beginPath();
+    if (half.side < 0) {
+      ctx.arc(0, 0, half.radius, Math.PI, Math.PI * 2, false);
+    } else {
+      ctx.arc(0, 0, half.radius, 0, Math.PI, false);
+    }
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.fillStyle = "rgba(255, 255, 255, 0.2)";
+    ctx.beginPath();
+    ctx.ellipse(half.side * half.radius * 0.22, -half.radius * 0.28, half.radius * 0.18, half.radius * 0.26, 0.6, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.strokeStyle = "rgba(255, 255, 255, 0.86)";
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.moveTo(-half.radius * 0.96, 0);
+    ctx.lineTo(half.radius * 0.96, 0);
+    ctx.stroke();
+
+    ctx.strokeStyle = "rgba(255, 255, 255, 0.28)";
+    ctx.lineWidth = 1;
+    for (let i = -0.48; i <= 0.48; i += 0.24) {
+      ctx.beginPath();
+      ctx.moveTo(half.radius * i, half.side * half.radius * 0.12);
+      ctx.lineTo(half.radius * i * 0.8, half.side * half.radius * 0.58);
+      ctx.stroke();
+    }
+
+    ctx.restore();
+  }
+}
+
 function drawParticles() {
   for (const particle of particles) {
     ctx.globalAlpha = Math.max(0, particle.life / particle.maxLife);
@@ -533,6 +607,7 @@ function drawBlade() {
 function draw() {
   drawBackground();
   drawItems();
+  drawFruitHalves();
   drawParticles();
   drawBlade();
 }
@@ -611,6 +686,7 @@ resetButton.addEventListener("click", async () => {
   roundState = "waiting";
   motionPackets = 0;
   waitingPanel.classList.remove("is-hidden");
+  syncHudVisibility();
   setStatus("Scan the QR code with your phone.", "Waiting");
 });
 
