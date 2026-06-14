@@ -12,7 +12,7 @@ Open the game on any screen. A QR code appears. Scan it with your phone. The gam
 
 No app install. No accounts. Just a URL and a Phone.
 
-![Gameplay Screenshot](./banner2.webp)
+![Gameplay Screenshot](./banner.webp)
 
 ---
 
