@@ -1,7 +1,7 @@
 {
-  "name": "saber-fruits",
+  "name": "fruits-wtf",
   "version": "0.1.0",
-  "description": "A QR-paired phone-controller fruit slicing browser game.",
+  "description": "A QR-paired phone-controller fruit slicing browser game for fruits.wtf.",
   "private": true,
   "type": "module",
   "engines": {

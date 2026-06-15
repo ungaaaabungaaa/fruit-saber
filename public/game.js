@@ -1,10 +1,19 @@
 import {
   applyBombHit,
+  applyComboHit,
+  applyComboTimer,
   applyFruitMiss,
+  applyRoundTimer,
+  calculateSliceScore,
   createRoomCode,
   createFruitHalves,
   formatLives,
+  formatComboMultiplier,
+  formatRoundTime,
+  getInfiniteDurationMs,
   getSaberTheme,
+  normalizeInfiniteDurationMinutes,
+  resetCombo,
   shouldEndRound
 } from "./game-rules.js";
 
@@ -16,13 +25,19 @@ const waitingPanel = document.querySelector("#waiting-panel");
 const roomCodeEl = document.querySelector("#room-code");
 const hudRoomEl = document.querySelector("#hud-room");
 const statusCopy = document.querySelector("#status-copy");
-const controllerLink = document.querySelector("#controller-link");
 const scoreEl = document.querySelector("#score");
+const comboHud = document.querySelector("#combo-hud");
+const comboEl = document.querySelector("#combo");
+const comboBurstEl = document.querySelector("#combo-burst");
 const livesEl = document.querySelector("#lives");
+const timerEl = document.querySelector("#timer");
+const playTimerEl = document.querySelector("#play-timer");
 const connectionPill = document.querySelector("#connection-pill");
 const practiceButton = document.querySelector("#practice-button");
 const resetButton = document.querySelector("#reset-button");
 const infiniteButton = document.querySelector("#infinite-button");
+const durationPicker = document.querySelector("#duration-picker");
+const durationButtons = Array.from(document.querySelectorAll("[data-duration-minutes]"));
 const colorButtons = Array.from(document.querySelectorAll("[data-saber-color]"));
 
 const themeCssVariables = {
@@ -48,8 +63,14 @@ let motionPackets = 0;
 let lastTime = performance.now();
 let spawnTimer = 0;
 let score = 0;
+let comboStreak = 0;
+let comboMultiplier = 1;
+let comboTimerMs = 0;
+let comboFlashMs = 0;
 let lives = 5;
 let infiniteLives = false;
+let infiniteDurationMinutes = readStoredInfiniteDuration();
+let timerRemainingMs = null;
 let audioContext;
 let saberTheme = getSaberTheme(readStoredSaberTheme());
 
@@ -72,7 +93,9 @@ function clamp(value, min, max) {
 
 function readStoredSaberTheme() {
   try {
-    return window.localStorage.getItem("saber-fruits-theme") || "mint";
+    return window.localStorage.getItem("fruits-wtf-theme")
+      || window.localStorage.getItem("saber-fruits-theme")
+      || "mint";
   } catch {
     return "mint";
   }
@@ -80,9 +103,25 @@ function readStoredSaberTheme() {
 
 function storeSaberTheme(themeId) {
   try {
-    window.localStorage.setItem("saber-fruits-theme", themeId);
+    window.localStorage.setItem("fruits-wtf-theme", themeId);
   } catch {
     // Local storage can be disabled in private browsing; the game still works.
+  }
+}
+
+function readStoredInfiniteDuration() {
+  try {
+    return normalizeInfiniteDurationMinutes(window.localStorage.getItem("fruits-wtf-duration"));
+  } catch {
+    return normalizeInfiniteDurationMinutes(5);
+  }
+}
+
+function storeInfiniteDuration(minutes) {
+  try {
+    window.localStorage.setItem("fruits-wtf-duration", String(minutes));
+  } catch {
+    // Local storage can be disabled in private browsing; the default timer still works.
   }
 }
 
@@ -103,6 +142,27 @@ function applySaberTheme(themeId, shouldStore = true) {
   if (shouldStore) {
     storeSaberTheme(saberTheme.id);
   }
+}
+
+function setInfiniteDuration(minutes, shouldStore = true) {
+  infiniteDurationMinutes = normalizeInfiniteDurationMinutes(minutes);
+
+  durationButtons.forEach((button) => {
+    const selected = Number(button.dataset.durationMinutes) === infiniteDurationMinutes;
+    button.classList.toggle("is-selected", selected);
+    button.setAttribute("aria-pressed", String(selected));
+  });
+
+  if (infiniteLives && !running) {
+    timerRemainingMs = getInfiniteDurationMs(infiniteDurationMinutes);
+  }
+
+  if (shouldStore) {
+    storeInfiniteDuration(infiniteDurationMinutes);
+  }
+
+  syncRoundDisplays();
+  updateModeButton();
 }
 
 function resize() {
@@ -151,7 +211,6 @@ async function renderQr() {
 
   roomCodeEl.textContent = roomId;
   hudRoomEl.textContent = roomId;
-  controllerLink.href = url;
 
   const response = await fetch(`/api/qr?text=${encodeURIComponent(url)}`);
   const { dataUrl } = await response.json();
@@ -174,21 +233,66 @@ function setStatus(copy, pill = copy) {
 
 function syncHudVisibility() {
   gameHud.classList.toggle("is-hidden", running);
+  playTimerEl.classList.toggle("is-visible", running && infiniteLives);
+  syncComboDisplays();
 }
 
 function currentLifeState() {
-  return { lives, infiniteLives };
+  return { lives, infiniteLives, timerRemainingMs };
+}
+
+function currentComboState() {
+  return { comboStreak, comboMultiplier, comboTimerMs };
 }
 
 function setLifeState(nextState) {
   lives = nextState.lives;
   infiniteLives = nextState.infiniteLives;
-  livesEl.textContent = formatLives(currentLifeState());
+  timerRemainingMs = Number.isFinite(nextState.timerRemainingMs)
+    ? nextState.timerRemainingMs
+    : timerRemainingMs;
+  syncRoundDisplays();
+}
+
+function setComboState(nextState, flash = false) {
+  comboStreak = nextState.comboStreak;
+  comboMultiplier = nextState.comboMultiplier;
+  comboTimerMs = nextState.comboTimerMs;
+  if (comboMultiplier <= 1) {
+    comboFlashMs = 0;
+  } else if (flash) {
+    comboFlashMs = 900;
+  }
+  syncComboDisplays();
 }
 
 function updateModeButton() {
   infiniteButton.setAttribute("aria-checked", String(infiniteLives));
-  infiniteButton.querySelector(".switch-state").textContent = infiniteLives ? "On" : "Off";
+  infiniteButton.querySelector(".switch-state").textContent = infiniteLives
+    ? `${infiniteDurationMinutes} min`
+    : "Off";
+  durationPicker.hidden = !infiniteLives;
+}
+
+function syncRoundDisplays() {
+  const timerText = infiniteLives
+    ? formatRoundTime(timerRemainingMs ?? getInfiniteDurationMs(infiniteDurationMinutes))
+    : "--";
+
+  scoreEl.textContent = score;
+  livesEl.textContent = formatLives(currentLifeState());
+  timerEl.textContent = timerText;
+  playTimerEl.textContent = timerText;
+}
+
+function syncComboDisplays() {
+  const comboText = formatComboMultiplier(currentComboState());
+  comboEl.textContent = comboText;
+  comboHud.classList.toggle("is-hot", comboMultiplier > 1);
+  comboHud.classList.toggle("is-max", comboMultiplier >= 6);
+  comboBurstEl.textContent = `${comboText} combo`;
+  comboBurstEl.classList.toggle("is-visible", running && comboMultiplier > 1 && comboFlashMs > 0);
+  comboBurstEl.classList.toggle("is-max", comboMultiplier >= 6);
 }
 
 function connectWebSocket() {
@@ -262,13 +366,21 @@ function handleMotion(message) {
 
 function startGame() {
   unlockAudio();
-  if (lives <= 0) {
+  if (lives <= 0 || (infiniteLives && timerRemainingMs <= 0)) {
     resetRound();
   }
   running = true;
   roundState = "playing";
   waitingPanel.classList.add("is-hidden");
   syncHudVisibility();
+}
+
+function endRound(message, pill = "Game over") {
+  running = false;
+  roundState = "gameover";
+  waitingPanel.classList.remove("is-hidden");
+  syncHudVisibility();
+  setStatus(message, pill);
 }
 
 function resetRound() {
@@ -278,10 +390,11 @@ function resetRound() {
   blade.trail.length = 0;
   running = false;
   score = 0;
+  setComboState(resetCombo(currentComboState()));
   lives = 5;
+  timerRemainingMs = infiniteLives ? getInfiniteDurationMs(infiniteDurationMinutes) : null;
   spawnTimer = 0;
-  scoreEl.textContent = score;
-  livesEl.textContent = formatLives(currentLifeState());
+  syncRoundDisplays();
   syncHudVisibility();
 }
 
@@ -318,8 +431,10 @@ function segmentDistance(px, py, ax, ay, bx, by) {
 
 function sliceFruit(fruit) {
   fruit.sliced = true;
-  score += 10;
-  scoreEl.textContent = score;
+  const nextCombo = applyComboHit(currentComboState());
+  setComboState(nextCombo, true);
+  score += calculateSliceScore(10, nextCombo);
+  syncRoundDisplays();
   playSliceSound();
   fruitHalves.push(...createFruitHalves(
     fruit,
@@ -345,6 +460,7 @@ function sliceFruit(fruit) {
 
 function hitBomb(bomb) {
   bomb.sliced = true;
+  setComboState(resetCombo(currentComboState()));
   setLifeState(applyBombHit(currentLifeState()));
   playBombSound();
 
@@ -364,11 +480,7 @@ function hitBomb(bomb) {
   }
 
   if (shouldEndRound(currentLifeState())) {
-    running = false;
-    roundState = "gameover";
-    waitingPanel.classList.remove("is-hidden");
-    syncHudVisibility();
-    setStatus("Bomb got you. Reset or try infinite lives.", controllerConnected ? "Phone linked" : "Waiting");
+    endRound("Bomb got you. Reset or try timed infinite lives.", controllerConnected ? "Phone linked" : "Waiting");
   }
 }
 
@@ -384,6 +496,21 @@ function update(dt) {
   }
   while (blade.trail.length && blade.trail[0].age > 190) {
     blade.trail.shift();
+  }
+
+  if (running && infiniteLives) {
+    setLifeState(applyRoundTimer(currentLifeState(), dt * 1000));
+    if (shouldEndRound(currentLifeState())) {
+      endRound("Time's up. Reset for another timed run.", "Time up");
+    }
+  }
+
+  if (running && comboStreak > 0) {
+    setComboState(applyComboTimer(currentComboState(), dt * 1000));
+  }
+  if (comboFlashMs > 0) {
+    comboFlashMs = Math.max(0, comboFlashMs - dt * 1000);
+    syncComboDisplays();
   }
 
   if (running) {
@@ -733,6 +860,7 @@ resetButton.addEventListener("click", async () => {
     ws.send(JSON.stringify({ type: "join-game", roomId }));
   }
   await renderQr();
+  resetRound();
   roundState = "waiting";
   motionPackets = 0;
   waitingPanel.classList.remove("is-hidden");
@@ -742,8 +870,16 @@ resetButton.addEventListener("click", async () => {
 
 infiniteButton.addEventListener("click", () => {
   infiniteLives = !infiniteLives;
-  livesEl.textContent = formatLives(currentLifeState());
+  timerRemainingMs = infiniteLives ? getInfiniteDurationMs(infiniteDurationMinutes) : null;
+  syncRoundDisplays();
   updateModeButton();
+  syncHudVisibility();
+});
+
+durationButtons.forEach((button) => {
+  button.addEventListener("click", () => {
+    setInfiniteDuration(button.dataset.durationMinutes);
+  });
 });
 
 colorButtons.forEach((button) => {
@@ -757,6 +893,7 @@ window.addEventListener("pointermove", handlePointerMove);
 window.addEventListener("pointerdown", unlockAudio);
 
 applySaberTheme(saberTheme.id, false);
+setInfiniteDuration(infiniteDurationMinutes, false);
 resize();
 resetRound();
 updateModeButton();

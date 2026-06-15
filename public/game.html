@@ -3,12 +3,12 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Saber Fruits</title>
+    <title>fruits.wtf</title>
     <link rel="stylesheet" href="/styles.css">
     <script src="https://code.iconify.design/iconify-icon/2.3.0/iconify-icon.min.js"></script>
   </head>
   <body class="game-page">
-    <canvas id="game-canvas" aria-label="Saber Fruits game display"></canvas>
+    <canvas id="game-canvas" aria-label="fruits.wtf game display"></canvas>
 
     <header class="game-hud" id="game-hud" aria-live="polite">
       <div class="hud-item">
@@ -16,10 +16,20 @@
         <span class="hud-label">Score</span>
         <strong id="score">0</strong>
       </div>
+      <div class="hud-item combo-hud" id="combo-hud">
+        <iconify-icon icon="mdi:flash"></iconify-icon>
+        <span class="hud-label">Combo</span>
+        <strong id="combo">x1</strong>
+      </div>
       <div class="hud-item">
         <iconify-icon icon="mdi:heart"></iconify-icon>
         <span class="hud-label">Lives</span>
         <strong id="lives">5</strong>
+      </div>
+      <div class="hud-item">
+        <iconify-icon icon="mdi:timer-outline"></iconify-icon>
+        <span class="hud-label">Timer</span>
+        <strong id="timer">--</strong>
       </div>
       <div class="hud-item">
         <iconify-icon icon="mdi:pound-box-outline"></iconify-icon>
@@ -28,11 +38,13 @@
       </div>
       <div class="connection-pill" id="connection-pill">Waiting</div>
     </header>
+    <div class="play-timer" id="play-timer" aria-live="polite">--</div>
+    <div class="combo-burst" id="combo-burst" aria-live="polite">x2 combo</div>
 
     <section class="waiting-panel" id="waiting-panel">
       <div class="brand-lockup">
         <iconify-icon icon="mdi:sword" class="brand-icon"></iconify-icon>
-        <h1>Saber Fruits</h1>
+        <h1>fruits.wtf</h1>
       </div>
 
       <div class="qr-wrap">
@@ -41,7 +53,6 @@
 
       <div class="room-code" id="room-code">------</div>
       <p class="status-copy" id="status-copy">Pairing room...</p>
-      <a class="manual-link" id="controller-link" href="#" target="_blank" rel="noreferrer">Open controller on this device</a>
 
       <button class="switch-toggle" id="infinite-button" type="button" role="switch" aria-checked="false">
         <span class="switch-label">
@@ -53,6 +64,16 @@
         </span>
         <span class="switch-state">Off</span>
       </button>
+
+      <div class="duration-picker" id="duration-picker" aria-label="Infinite lives timer" hidden>
+        <span>Timer</span>
+        <div class="duration-options">
+          <button class="duration-button is-selected" type="button" data-duration-minutes="5" aria-pressed="true">5 min</button>
+          <button class="duration-button" type="button" data-duration-minutes="10" aria-pressed="false">10 min</button>
+          <button class="duration-button" type="button" data-duration-minutes="15" aria-pressed="false">15 min</button>
+          <button class="duration-button" type="button" data-duration-minutes="20" aria-pressed="false">20 min</button>
+        </div>
+      </div>
 
       <div class="theme-picker" aria-label="Saber color">
         <span>Saber color</span>
@@ -78,6 +99,15 @@
       </div>
     </section>
 
-    <script type="module" src="/game.js?v=theme-controls"></script>
+    <footer class="game-footer">
+      <a href="https://www.instagram.com/ungaaaabungaaa/" target="_blank" rel="noreferrer">
+        <iconify-icon icon="mdi:coffee"></iconify-icon>
+        <span>Buy me a coffee</span>
+        <strong>@ungaaaabungaaa</strong>
+        <iconify-icon icon="mdi:instagram"></iconify-icon>
+      </a>
+    </footer>
+
+    <script type="module" src="/game.js?v=timed-brand"></script>
   </body>
 </html>

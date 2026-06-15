@@ -247,7 +247,7 @@ export function createSaberServer() {
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   const server = createSaberServer();
   server.listen(PORT, "0.0.0.0", () => {
-    console.log(`Saber Fruits running at http://localhost:${PORT}`);
+    console.log(`fruits.wtf running at http://localhost:${PORT}`);
     for (const url of getLocalNetworkUrls(PORT)) {
       console.log(`Same-WiFi URL: ${url}`);
     }

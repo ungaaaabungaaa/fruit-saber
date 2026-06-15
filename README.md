@@ -1,8 +1,8 @@
-# Saber Fruits
+# fruits.wtf
 
 > A motion-controlled browser game — scan a QR code on your phone, swing it like a lightsaber, and slash falling fruits on screen.
 
-![Saber Fruits Banner](./banner2.webp)
+![fruits.wtf Banner](./banner2.webp)
 
 ---
 
@@ -49,7 +49,7 @@ The system has three pieces: a phone controller, a Node.js relay server, and the
 ## Project structure
 
 ```
-lightsaber-fruits/
+fruits-wtf/
 ├── server.js              # Express + WebSocket server, room management
 ├── package.json
 └── public/
@@ -66,8 +66,8 @@ lightsaber-fruits/
 ### Run locally
 
 ```bash
-git clone https://github.com/ungaaaabungaaa/fruit-saber.git
-cd fruit-saber
+git clone https://github.com/ungaaaabungaaa/Saber-Fruits.git
+cd Saber-Fruits
 npm install
 node server.js
 ```
@@ -89,7 +89,7 @@ Set the `PORT` environment variable if needed (Railway sets it automatically). O
 
 ### Deploy to AWS EC2
 
-If you have AWS free-tier credits/access, the simplest AWS path is a small EC2 instance running Docker. This works well for Saber Fruits because the server is a normal long-running Node.js process with WebSockets.
+If you have AWS free-tier credits/access, the simplest AWS path is a small EC2 instance running Docker. This works well for fruits.wtf because the server is a normal long-running Node.js process with WebSockets.
 
 AWS references:
 
@@ -120,7 +120,7 @@ iPhone motion needs HTTPS, so use a real domain.
 Create an `A` record at your DNS provider:
 
 ```text
-yourdomain.com -> EC2 public IPv4 address
+fruits.wtf -> EC2 public IPv4 address
 ```
 
 Using an Elastic IP makes the address stable, but AWS may charge for public IPv4 addresses. If you skip Elastic IP, your public IP can change when the instance stops/starts.
@@ -149,35 +149,35 @@ sudo usermod -aG docker $USER
 newgrp docker
 ```
 
-#### 4. Build and run Saber Fruits
+#### 4. Build and run fruits.wtf
 
 ```bash
-git clone https://github.com/ungaaaabungaaa/fruit-saber.git
-cd fruit-saber
-docker build -t fruit-saber .
-docker network create fruit-saber-net
+git clone https://github.com/ungaaaabungaaa/Saber-Fruits.git
+cd Saber-Fruits
+docker build -t fruits-wtf .
+docker network create fruits-wtf-net
 docker run -d \
-  --name fruit-saber \
-  --network fruit-saber-net \
+  --name fruits-wtf \
+  --network fruits-wtf-net \
   --restart unless-stopped \
-  fruit-saber
+  fruits-wtf
 ```
 
 #### 5. Add HTTPS with Caddy
 
-Replace `yourdomain.com` with your real domain.
+Replace `fruits.wtf` if you use a different domain.
 
 ```bash
 mkdir -p ~/caddy/data ~/caddy/config
 cat > ~/Caddyfile <<'EOF'
-yourdomain.com {
-  reverse_proxy fruit-saber:3000
+fruits.wtf {
+  reverse_proxy fruits-wtf:3000
 }
 EOF
 
 docker run -d \
-  --name fruit-saber-caddy \
-  --network fruit-saber-net \
+  --name fruits-wtf-caddy \
+  --network fruits-wtf-net \
   --restart unless-stopped \
   -p 80:80 \
   -p 443:443 \
@@ -190,7 +190,7 @@ docker run -d \
 Open:
 
 ```text
-https://yourdomain.com/game
+https://fruits.wtf/game
 ```
 
 Caddy automatically requests and renews HTTPS certificates when DNS points to the instance and ports `80`/`443` are open.
@@ -198,15 +198,15 @@ Caddy automatically requests and renews HTTPS certificates when DNS points to th
 #### 6. Update after new commits
 
 ```bash
-cd fruit-saber
+cd Saber-Fruits
 git pull
-docker build -t fruit-saber .
-docker rm -f fruit-saber
+docker build -t fruits-wtf .
+docker rm -f fruits-wtf
 docker run -d \
-  --name fruit-saber \
-  --network fruit-saber-net \
+  --name fruits-wtf \
+  --network fruits-wtf-net \
   --restart unless-stopped \
-  fruit-saber
+  fruits-wtf
 ```
 
 ---
@@ -233,4 +233,3 @@ docker run -d \
 | Tilt left / right | Move saber horizontally (`gamma`) |
 | Tilt forward / back | Move saber vertically (`beta`) |
 | Swing fast | Longer saber trail, more dramatic slashes |
-

@@ -3,11 +3,20 @@ import { test } from "node:test";
 
 import {
   applyBombHit,
+  applyComboHit,
+  applyComboTimer,
   applyFruitMiss,
+  applyRoundTimer,
+  calculateSliceScore,
   createRoomCode,
   createFruitHalves,
   formatLives,
+  formatComboMultiplier,
+  formatRoundTime,
+  getInfiniteDurationMs,
   getSaberTheme,
+  normalizeInfiniteDurationMinutes,
+  resetCombo,
   shouldEndRound
 } from "../public/game-rules.js";
 
@@ -38,6 +47,56 @@ test("only normal mode at zero lives ends the round", () => {
 test("infinite lives displays as an infinity symbol", () => {
   assert.equal(formatLives({ lives: 3, infiniteLives: true }), "∞");
   assert.equal(formatLives({ lives: 3, infiniteLives: false }), "3");
+});
+
+test("timed infinite lives counts down and ends at zero", () => {
+  const active = applyRoundTimer(
+    { lives: 0, infiniteLives: true, timerRemainingMs: 120_000 },
+    30_000
+  );
+  const expired = applyRoundTimer(active, 120_000);
+
+  assert.equal(normalizeInfiniteDurationMinutes(15), 15);
+  assert.equal(normalizeInfiniteDurationMinutes(999), 5);
+  assert.equal(getInfiniteDurationMs(20), 1_200_000);
+  assert.equal(formatRoundTime(65_000), "1:05");
+  assert.deepEqual(active, { lives: 0, infiniteLives: true, timerRemainingMs: 90_000 });
+  assert.equal(shouldEndRound(active), false);
+  assert.equal(expired.timerRemainingMs, 0);
+  assert.equal(shouldEndRound(expired), true);
+});
+
+test("fruit hits build x2 x4 x6 combo and bombs reset it", () => {
+  let combo = resetCombo({});
+  for (let i = 0; i < 3; i += 1) combo = applyComboHit(combo);
+  assert.equal(combo.comboMultiplier, 2);
+  assert.equal(formatComboMultiplier(combo), "x2");
+  assert.equal(calculateSliceScore(10, combo), 20);
+
+  for (let i = 3; i < 7; i += 1) combo = applyComboHit(combo);
+  assert.equal(combo.comboMultiplier, 4);
+  assert.equal(calculateSliceScore(10, combo), 40);
+
+  for (let i = 7; i < 12; i += 1) combo = applyComboHit(combo);
+  assert.equal(combo.comboMultiplier, 6);
+  assert.equal(calculateSliceScore(10, combo), 60);
+
+  assert.deepEqual(resetCombo(combo), {
+    comboStreak: 0,
+    comboMultiplier: 1,
+    comboTimerMs: 0
+  });
+});
+
+test("combo expires when slicing pauses", () => {
+  const active = applyComboHit(applyComboHit(applyComboHit(resetCombo({}))));
+  const ticking = applyComboTimer(active, 700);
+  const expired = applyComboTimer(active, 2500);
+
+  assert.equal(ticking.comboMultiplier, 2);
+  assert.ok(ticking.comboTimerMs > 0);
+  assert.equal(expired.comboStreak, 0);
+  assert.equal(expired.comboMultiplier, 1);
 });
 
 test("saber themes provide UI and blade colors with mint fallback", () => {
