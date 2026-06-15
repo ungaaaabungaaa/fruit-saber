@@ -147,7 +147,7 @@ const SABER_THEMES = [
 
 const ROOM_CODE_ALPHABET = "BCDFGHJKLMNPQRSTVWXYZ23456789";
 export const INFINITE_LIFE_DURATION_MINUTES = [5, 10, 15, 20];
-export const COMBO_WINDOW_MS = 1800;
+export const COMBO_WINDOW_MS = 2800;
 
 export function createRoomCode(length = 6, random = Math.random) {
   let code = "";
