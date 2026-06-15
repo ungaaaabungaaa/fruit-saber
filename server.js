@@ -9,6 +9,28 @@ import { WebSocket, WebSocketServer } from "ws";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PORT = Number(process.env.PORT || 3000);
 
+function shouldStartServer() {
+  return process.env.pm_id !== undefined
+    || process.env.PM2_HOME !== undefined
+    || process.argv[1] === fileURLToPath(import.meta.url);
+}
+
+function bootServer() {
+  const server = createSaberServer();
+  server.listen(PORT, "0.0.0.0", () => {
+    console.log(`fruits.wtf running at http://localhost:${PORT}`);
+    for (const url of getLocalNetworkUrls(PORT)) {
+      console.log(`Same-WiFi URL: ${url}`);
+    }
+  });
+
+  server.on("error", (error) => {
+    console.error(`server error on ${PORT}`, error);
+  });
+
+  return server;
+}
+
 function safeJson(raw) {
   try {
     return JSON.parse(raw.toString());
@@ -244,12 +266,6 @@ export function createSaberServer() {
   return server;
 }
 
-if (process.argv[1] === fileURLToPath(import.meta.url)) {
-  const server = createSaberServer();
-  server.listen(PORT, "0.0.0.0", () => {
-    console.log(`fruits.wtf running at http://localhost:${PORT}`);
-    for (const url of getLocalNetworkUrls(PORT)) {
-      console.log(`Same-WiFi URL: ${url}`);
-    }
-  });
+if (shouldStartServer()) {
+  bootServer();
 }
